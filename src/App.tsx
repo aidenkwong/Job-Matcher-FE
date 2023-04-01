@@ -17,7 +17,7 @@ function App() {
     name: "file",
     maxCount: 1,
     multiple: false,
-    action: "http://127.0.0.1:8000/",
+    action: import.meta.env.BACKEND_URL,
     onChange(info) {
       const { status } = info.file;
       if (status === "done") {
