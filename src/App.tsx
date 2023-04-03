@@ -2,10 +2,11 @@ import "./App.css";
 import { useState } from "react";
 import Job from "./components/Job";
 
-import { message, Upload, Typography } from "antd";
+import { Upload, Typography } from "antd";
 import { InboxOutlined } from "@ant-design/icons";
 import type { UploadProps } from "antd";
 import ViewJob from "./components/ViewJob";
+import axios from "axios";
 const { Dragger } = Upload;
 const { Title } = Typography;
 
@@ -17,14 +18,35 @@ function App() {
     name: "file",
     maxCount: 1,
     multiple: false,
-    action: import.meta.env.BACKEND_URL,
-    onChange(info) {
-      const { status } = info.file;
-      if (status === "done") {
-        message.success(`${info.file.name} file uploaded successfully.`);
-        setJobs(info.file.response);
-      } else if (status === "error") {
-        message.error(`${info.file.name} file upload failed.`);
+    customRequest: async (options) => {
+      const { onSuccess, onError, file, onProgress, action } = options;
+
+      const fmData = new FormData();
+      const config = {
+        headers: { "content-type": "multipart/form-data" },
+        onUploadProgress: (event: any) => {
+          const percent = Math.floor((event.loaded / event.total) * 100);
+          onProgress!!({ percent: percent });
+        }
+      };
+      fmData.append("file", file);
+      try {
+        const res = await axios.post(
+          import.meta.env.VITE_BACKEND_URL,
+          fmData,
+          config
+        );
+
+        onSuccess!!("Ok");
+        setJobs(res.data);
+      } catch (err) {
+        onError!!({
+          name: "server error",
+          message: "server error",
+          status: 500,
+          method: "POST",
+          url: import.meta.env.VITE_BACKEND_URL
+        });
       }
     },
     onDrop(e) {
@@ -49,14 +71,15 @@ function App() {
       </Dragger>
       <div style={{ marginTop: "0.5rem", display: "flex" }}>
         <div style={{ width: "fit-content", marginRight: "16px" }}>
-          {jobs.map((job, idx) => (
-            <Job
-              key={idx}
-              job={job}
-              idx={idx}
-              setSelectedJob={setSelectedJob}
-            />
-          ))}
+          {jobs.length > 0 &&
+            jobs.map((job, idx) => (
+              <Job
+                key={idx}
+                job={job}
+                idx={idx}
+                setSelectedJob={setSelectedJob}
+              />
+            ))}
         </div>
         <div style={{ flex: 1 }}>
           {selectedJob && <ViewJob job={selectedJob} />}
